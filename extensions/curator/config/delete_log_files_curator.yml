@@ -1,0 +1,47 @@
+actions:
+  1:
+    action: delete_indices
+    description: >-
+      Delete indices pedidos a cada  15 minutos
+    options:
+      ignore_empty_list: True
+      disable_action: False
+    filters:
+    - filtertype: pattern
+      kind: prefix
+      value: applicationlog-
+      exclude:  
+    - filtertype: age
+      source: creation_date
+      direction: older
+      #timestring: '%Y.%m.%d'
+      unit: days
+      unit_count: 1
+      exclude: 
+
+  2:
+    action: delete_indices
+    description: >-
+      Delete indices metricbeat-7.9.3- 
+    options:
+      ignore_empty_list: True
+      disable_action: False
+      timeout_override:
+      #continue_if_exeption: False
+      allow_ilm_indices: true
+    filters:
+    - filtertype: pattern
+      kind: prefix
+      value: metricbeat-7.9.3-
+      exclude: 
+    - filtertype: pattern
+      kind: suffix
+      value: '-000001'
+      exclude: 
+    - filtertype: age
+      source: name
+      direction: older
+      timestring: '%Y.%m.%d'
+      unit: days
+      unit_count: 7  
+      exclude: 

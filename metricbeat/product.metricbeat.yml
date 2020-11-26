@@ -1,0 +1,73 @@
+metricbeat.modules:
+- module: docker
+  metricsets: ["container", "cpu", "diskio", "event", "healthcheck", "image", "info", "memory", "network"]
+  hosts: ["unix:///var/run/docker.sock"]
+  period: 10s
+
+#- module: system
+#  metricsets:
+#    - cpu             # CPU usage
+#    - load            # CPU load averages
+#    - memory          # Memory usage
+#    - network         # Network IO
+#    - process         # Per process metrics
+#    - process_summary # Process summary
+#    - uptime          # System Uptime
+#    - socket_summary  # Socket summary
+#    - core           # Per CPU core usage
+#    - diskio         # Disk IO
+#    - filesystem     # File system usage for each mountpoint
+#    - fsstat         # File system summary metrics
+#  enabled: true
+#  period: 60s
+#  processes: ['.*']
+#  cpu.metrics: ["percentages"]
+#  core.metrics: ["percentages"]
+#  socket.reverse_lookup.enabled: true
+#  socket.reverse_lookup.success_ttl: 60s
+#  socket.reverse_lookup.failure_ttl: 120s
+
+
+
+- module: elasticsearch
+   metricsets: ["node", "node_stats", "cluster_stats", "index"]
+ # metricsets:
+ #   - ccr
+ #   - cluster_stats
+ #   - index
+ #   - index_recovery
+ #   - index_summary
+ #   - ml_job
+ #   - node_stats
+ #   - shard
+  period: 10s
+  hosts: ["elasticsearch:9200"]  
+  username: "elastic"
+  password: "changeme"
+  #xpack.enabled: true
+
+- module: rabbitmq
+  metricsets: ["exchange", "connection", "node", "queue"]
+  period: 10s
+  hosts: ["rabbitmq:15672"]
+  username: logUser
+  password: logPwd
+
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  user : "elastic"
+  username: "elastic"
+  password: "changeme"
+   
+
+  #ilm.enabled: True
+  #ilm.rollover_alias: "metricbeat"
+  #ilm.pattern: "{now/d}-000001"
+
+setup.kibana:
+  host: "kibana:5601"  
+  username: "elastic" 
+  password: "changeme"  
+
+

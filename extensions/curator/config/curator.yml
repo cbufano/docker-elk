@@ -1,0 +1,16 @@
+# Curator configuration
+# https://www.elastic.co/guide/en/elasticsearch/client/curator/current/configfile.html
+
+client:
+  hosts:
+    - elasticsearch
+    #- 127.0.0.1 
+  port: 9200
+  http_auth: elastic:changeme
+  
+
+logging:
+  #loglevel: INFO
+  loglevel: DEBUG
+  logformat: default
+  blacklist: ['elasticsearch','urllib3']

@@ -1,0 +1,156 @@
+version: '3.2'
+
+services:
+  ##########################################################
+  rabbitmq:
+    container_name: RabbitMQ
+    image: rabbitmq:3.8.9-management-alpine
+    volumes:
+      #- mq_data:/var/lib/rabbitmq/mnesia
+      - mq_data:/usr/share/RabbitMQ/data
+      # SO funciona no Build
+      #type: volume
+      #source: mq_data
+      #target: /usr/share/RabbitMQ/data
+    ports:
+      - "15672:15672"
+      - "5672:5672" 
+    networks:
+      - elk
+    environment:
+      RABBITMQ_DEFAULT_USER: logUser
+      RABBITMQ_DEFAULT_PASS: logPwd
+      RABBITMQ_DEFAULT_VHOST: EnterpriseLog
+  ##########################################################
+  elasticsearch:
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELASTIC_PASSWORD: changeme
+      # Use single node discovery in order to disable production mode and avoid bootstrap checks.
+      # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
+      discovery.type: single-node
+    networks:
+      - elk
+
+  logstash:
+    build:
+      context: logstash/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./logstash/config/logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+        read_only: true
+      - type: bind
+        source: ./logstash/pipeline
+        target: /usr/share/logstash/pipeline
+        read_only: true
+      - type: volume
+        source: logstashdata
+        target: /usr/share/logstash/data
+    ports:
+      #- "5044:5044"
+      #- "5000:5000/tcp"
+      #- "5000:5000/udp"
+      #- "5672:5672"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    build:
+      context: kibana/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+      - type: volume
+        source: kibanadata
+        target: /usr/share/kibana/data
+        #- kibanadata:/usr/share/kibana/data  
+    ports:
+      - "5601:5601"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+  ##########################################################
+  metricbeat:
+    container_name: metricbeat
+    build: 
+      context: ./metricbeat
+    user: root
+    volumes:      
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - elasticsearch
+      - kibana
+    restart: on-failure
+    networks:
+      - elk
+  ##########################################################
+  curator:
+    container_name: curator
+    build:
+      context: ./extensions/curator
+      #init: true
+    volumes:
+      - type: bind
+        source: ./extensions/curator/config/curator.yml
+        target: /usr/share/curator/config/curator.yml
+        read_only: true
+      - type: bind
+        source: ./extensions/curator/config/delete_log_files_curator.yml
+        target: /usr/share/curator/config/delete_log_files_curator.yml
+        read_only: true
+    user: root
+    depends_on:
+      - elasticsearch
+      - kibana
+    restart: on-failure
+    networks:
+      - elk
+  ##########################################################
+  elastichq:
+    container_name: elastichq
+    image: elastichq/elasticsearch-hq
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5000:5000"
+    restart: on-failure
+    networks:
+      - elk
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  elasticsearch:
+  mq_data:
+  logstashdata:
+  kibanadata:
